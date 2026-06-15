@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="th" data-theme="light">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>STU-Check | ระบบ AI ประเมินห้องเรียน</title>
+  <meta name="description" content="ระบบ AI ประเมินผลการจัดการเรียนการสอนในห้องเรียน โรงเรียนพะเยาพิทยาคม วิเคราะห์อารมณ์นักเรียนแบบ Real-time ผ่านกล้อง Webcam">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="STU-Check">
+  <meta name="theme-color" content="#4361ee">
+  <link rel="apple-touch-icon"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%234361ee'/%3E%3Ccircle cx='50' cy='40' r='18' fill='white'/%3E%3Cellipse cx='50' cy='74' rx='24' ry='15' fill='white'/%3E%3Ccircle cx='43' cy='37' r='3' fill='%234361ee'/%3E%3Ccircle cx='57' cy='37' r='3' fill='%234361ee'/%3E%3Cpath d='M42 47 Q50 55 58 47' stroke='%234361ee' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+  <!-- CAMERA PERMISSION PAGE -->
+  <div id="page-camperm" class="page">
+    <div class="lbg1"></div>
+    <div class="lbg2"></div>
+    <div class="camperm-card">
+      <div class="camperm-icon">
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="20" cy="16" r="9" fill="white" />
+          <ellipse cx="20" cy="31" rx="12" ry="7" fill="white" />
+          <circle cx="16.5" cy="14" r="1.5" fill="#4361ee" />
+          <circle cx="23.5" cy="14" r="1.5" fill="#4361ee" />
+          <path d="M16 20 Q20 24.5 24 20" stroke="#4361ee" stroke-width="2" fill="none" stroke-linecap="round" />
+        </svg>
+      </div>
+      <div class="camperm-title">STU-Check</div>
+      <div class="camperm-sub">ระบบ AI ประเมินผลการเรียนการสอนในห้องเรียน<br>โรงเรียนพะเยาพิทยาคม</div>
+      <div class="camperm-list">
+        <div class="camperm-item"><i class="bi bi-camera-video"></i><span>ต้องการสิทธิ์เข้าถึง <strong>กล้อง
+              Webcam</strong> เพื่อวิเคราะห์อารมณ์ผู้เรียนแบบ Real-time</span></div>
+        <div class="camperm-item"><i class="bi bi-cloud-arrow-up"></i><span>ส่งภาพนิ่ง <strong>1 ภาพ ต่อ 1 นาที</strong>
+            ไปประมวลผลที่เซิร์ฟเวอร์ — ไม่บันทึกวิดีโอ</span></div>
+        <div class="camperm-item"><i class="bi bi-shield-check"></i><span><strong>ประมวลผลบน Server ที่บ้าน</strong>
+            เชื่อมต่อผ่าน Ngrok HTTPS</span></div>
+      </div>
+      <div class="perm-error" id="perm-error">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <span id="perm-error-msg">ไม่สามารถเข้าถึงกล้องได้ กรุณาอนุญาตในการตั้งค่าเบราว์เซอร์แล้วลองใหม่</span>
+      </div>
+      <button class="btn-perm" id="perm-btn" onclick="requestCameraPermission()">
+        <i class="bi bi-camera-video-fill"></i>อนุญาตใช้งานกล้อง
+      </button>
+      <button class="btn-perm-skip" onclick="skipPermission()">ข้ามขั้นตอนนี้ (ฟีเจอร์บางส่วนอาจใช้ไม่ได้)</button>
+    </div>
+  </div>
+
+  <!-- LOGIN PAGE -->
+  <div id="page-login" class="page active">
+    <div class="lbg1"></div>
+    <div class="lbg2"></div>
+    <div class="login-card">
+      <div class="login-logo">
+        <div class="login-icon">
+          <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+            <circle cx="15" cy="12" r="7" fill="white" />
+            <ellipse cx="15" cy="24" rx="9" ry="5.5" fill="white" />
+            <circle cx="12" cy="10.5" r="1.2" fill="#4361ee" />
+            <circle cx="18" cy="10.5" r="1.2" fill="#4361ee" />
+            <path d="M12 15.5 Q15 19 18 15.5" stroke="#4361ee" stroke-width="1.6" fill="none" stroke-linecap="round" />
+          </svg>
+        </div>
+        <div class="login-title">STU-Check</div>
+        <div class="login-sub">ระบบ AI ประเมินผลการเรียนการสอนในห้องเรียน<br>โรงเรียนพะเยาพิทยาคม</div>
+      </div>
+      <div class="login-error" id="login-error"><i
+          class="bi bi-exclamation-circle-fill"></i><span id="login-error-msg">ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง</span></div>
+      <div class="login-error" id="login-success" style="background:rgba(13,170,107,0.08);border-color:rgba(13,170,107,0.25);color:var(--positive);"><i
+          class="bi bi-check-circle-fill"></i><span>สมัครสำเร็จ! กรุณาเข้าสู่ระบบ</span></div>
+      <div class="form-group">
+        <label>ชื่อผู้ใช้</label>
+        <div class="input-wrap"><i class="bi bi-person"></i><input type="text" id="login-user"
+            placeholder="กรอกชื่อผู้ใช้" autocomplete="username"></div>
+      </div>
+      <div class="form-group">
+        <label>รหัสผ่าน</label>
+        <div class="input-wrap"><i class="bi bi-lock"></i><input type="password" id="login-pass"
+            placeholder="กรอกรหัสผ่าน" autocomplete="current-password"></div>
+      </div>
+      <div class="form-group" id="confirm-pass-group" style="display:none;">
+        <label>ยืนยันรหัสผ่าน</label>
+        <div class="input-wrap"><i class="bi bi-lock-fill"></i><input type="password" id="login-confirm-pass"
+            placeholder="กรอกรหัสผ่านอีกครั้ง" autocomplete="new-password"></div>
+      </div>
+      <button class="btn-login" id="btn-auth" onclick="doAuth()"><i class="bi bi-box-arrow-in-right"></i><span id="btn-auth-text">เข้าสู่ระบบ</span></button>
+      <button class="btn-perm-skip" id="btn-toggle-mode" onclick="toggleAuthMode()" style="margin-top:6px;">ยังไม่มีบัญชี? <strong>สมัครสมาชิก</strong></button>
+    </div>
+  </div>
+
+  <!-- APP PAGE -->
+  <div id="page-app" class="page">
+    <nav class="nav">
+      <div class="nav-brand">
+        <div class="nav-brand-icon">
+          <svg width="18" height="18" viewBox="0 0 30 30" fill="none">
+            <circle cx="15" cy="12" r="7" fill="white" />
+            <ellipse cx="15" cy="24" rx="9" ry="5.5" fill="white" />
+            <circle cx="12" cy="10.5" r="1.2" fill="#4361ee" />
+            <circle cx="18" cy="10.5" r="1.2" fill="#4361ee" />
+            <path d="M12 15.5 Q15 19 18 15.5" stroke="#4361ee" stroke-width="1.6" fill="none" stroke-linecap="round" />
+          </svg>
+        </div>
+        STU-Check
+      </div>
+      <div class="nav-right">
+        <button class="profile-btn" id="profile-btn" onclick="toggleDropdown()">
+          <div class="profile-avatar" id="nav-avatar">
+            <span id="nav-avatar-letter">?</span>
+            <img id="nav-avatar-img" src=""
+              style="display:none;width:100%;height:100%;object-fit:cover;border-radius:7px;">
+          </div>
+          <span class="profile-name" id="nav-username">ผู้ใช้</span>
+          <i class="bi bi-chevron-down"></i>
+        </button>
+        <div class="profile-dropdown" id="profile-dropdown">
+          <div class="dd-header">
+            <div class="dd-username" id="dd-name">ผู้ใช้</div>
+            <div class="dd-id" id="dd-id">ID: —</div>
+          </div>
+          <button class="dd-item" onclick="openSettings();closeDropdown();"><i
+              class="bi bi-gear"></i>การตั้งค่า</button>
+          <button class="dd-item"
+            onclick="openSettings();closeDropdown();document.getElementById('avatar-file-input').click();"><i
+              class="bi bi-camera"></i>เปลี่ยนรูปโปรไฟล์</button>
+          <button class="dd-item danger" onclick="doLogout();closeDropdown();"><i
+              class="bi bi-box-arrow-right"></i>ออกจากระบบ</button>
+        </div>
+      </div>
+    </nav>
+    <div class="tabs">
+      <button class="tab active" id="dt-camera" onclick="switchTab('camera')"><i
+          class="bi bi-camera-video"></i>กล้องตรวจจับ</button>
+      <button class="tab" id="dt-dashboard" onclick="switchTab('dashboard')"><i
+          class="bi bi-bar-chart-line"></i>แดชบอร์ด</button>
+      <button class="tab" id="dt-about" onclick="switchTab('about')"><i class="bi bi-info-circle"></i>เกี่ยวกับ</button>
+    </div>
+
+    <div class="content">
+      <!-- CAMERA -->
+      <div id="tab-camera" class="tab-content active">
+        <div class="camera-layout">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title"><i class="bi bi-camera-video"></i><span
+                  id="cam-status-text">กล้องยังไม่เปิด</span></div>
+              <div class="live-pill" id="live-pill"><i class="bi bi-record-circle-fill" style="font-size:9px;"></i>LIVE
+              </div>
+            </div>
+            <div class="camera-wrap">
+              <div class="cam-placeholder" id="cam-placeholder"><i
+                  class="bi bi-camera-video-off"></i><span>กดปุ่มเริ่มเพื่อเปิดกล้อง</span></div>
+              <video id="video" autoplay muted playsinline></video>
+              <canvas id="canvas"></canvas>
+            </div>
+            <div class="camera-footer">
+              <button class="btn-toggle start" id="btn-toggle" onclick="handleToggle()">
+                <i class="bi bi-play-fill" id="btn-icon"></i><span id="btn-text">เริ่มกล้อง</span>
+              </button>
+              <div class="timer-badge"><i class="bi bi-clock"></i><span id="timer-display">00:00</span></div>
+            </div>
+          </div>
+
+          <!-- Server Status Card -->
+          <div class="card" style="margin-top:0;" id="server-status-card">
+            <div class="card-header">
+              <div class="card-title"><i class="bi bi-hdd-network"></i>สถานะเซิร์ฟเวอร์</div>
+              <div id="server-status-pill" class="live-pill" style="background:rgba(255,165,0,0.15);color:#d08c00;border-color:rgba(208,140,0,0.3);">
+                <i class="bi bi-circle-fill" style="font-size:7px;"></i>ไม่ทราบสถานะ
+              </div>
+            </div>
+            <div style="padding:10px 14px 14px;">
+              <div style="font-size:11.5px;color:var(--text3);margin-bottom:8px;">Ngrok Server URL</div>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <input type="text" id="server-url-input" class="setting-input"
+                  placeholder="https://xxxx-xxx.ngrok-free.app"
+                  style="font-size:11.5px;padding:7px 10px;flex:1;"
+                  oninput="onServerUrlChange(this.value)">
+                <button onclick="checkServerStatus()" style="padding:7px 12px;border-radius:8px;border:1.5px solid var(--border);background:var(--card);color:var(--text2);font-size:12px;cursor:pointer;white-space:nowrap;font-family:inherit;">
+                  <i class="bi bi-arrow-clockwise"></i> ตรวจสอบ
+                </button>
+              </div>
+              <div id="server-status-msg" style="font-size:11px;color:var(--text3);margin-top:7px;min-height:16px;"></div>
+            </div>
+          </div>
+
+          <div class="sidebar">
+            <div class="stat-card">
+              <div class="stat-label"><i class="bi bi-people"></i>ใบหน้าที่ตรวจพบ</div>
+              <div class="stat-value" id="face-count" style="color:var(--accent);">0</div>
+              <div class="stat-sub" id="face-sub">ยังไม่ได้เปิดกล้อง</div>
+            </div>
+            <div class="stat-row">
+              <div class="stat-card">
+                <div class="stat-label"><i class="bi bi-emoji-smile"></i>Positive</div>
+                <div class="stat-value" style="color:var(--positive);" id="count-pos">0</div>
+                <div class="stat-sub">คน</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label"><i class="bi bi-emoji-frown"></i>Negative</div>
+                <div class="stat-value" style="color:var(--negative);" id="count-neg">0</div>
+                <div class="stat-sub">คน</div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label"><i class="bi bi-pie-chart"></i>สัดส่วนอารมณ์</div>
+              <div class="prog-section">
+                <div class="prog-row"><span class="prog-lbl" style="color:var(--positive);">Positive</span>
+                  <div class="prog-bar">
+                    <div class="prog-fill fill-pos" id="bar-pos" style="width:0%"></div>
+                  </div><span class="prog-pct" id="pct-pos" style="color:var(--positive);">0%</span>
+                </div>
+                <div class="prog-row"><span class="prog-lbl" style="color:var(--negative);">Negative</span>
+                  <div class="prog-bar">
+                    <div class="prog-fill fill-neg" id="bar-neg" style="width:0%"></div>
+                  </div><span class="prog-pct" id="pct-neg" style="color:var(--negative);">0%</span>
+                </div>
+                <div class="prog-row"><span class="prog-lbl" style="color:var(--neutral);">Normal</span>
+                  <div class="prog-bar">
+                    <div class="prog-fill fill-neu" id="bar-neu" style="width:0%"></div>
+                  </div><span class="prog-pct" id="pct-neu" style="color:var(--neutral);">0%</span>
+                </div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label"><i class="bi bi-clipboard-data"></i>ผลสะสมคาบนี้</div>
+              <div style="display:flex;flex-direction:column;gap:7px;font-size:12.5px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;"><span
+                    style="color:var(--text2);">รอบสแกน</span><strong id="scan-rounds"
+                    style="font-family:'IBM Plex Sans',monospace;">0</strong></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;"><span
+                    style="color:var(--text2);">คะแนนรวม</span><strong id="score-total"
+                    style="color:var(--accent);font-family:'IBM Plex Sans',monospace;">0</strong></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;"><span
+                    style="color:var(--text2);">บรรยากาศ</span><span id="atmosphere-badge"
+                    style="font-size:11.5px;font-weight:600;color:var(--text3);">รอประเมิน</span></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;"><span
+                    style="color:var(--text2);">สแกนถัดไป</span><span id="next-scan-badge"
+                    style="font-size:11.5px;font-weight:600;color:var(--text3);">—</span></div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label" style="margin-bottom:9px;"><i class="bi bi-terminal"></i>บันทึกระบบ</div>
+              <div class="log-area" id="log-area">
+                <div class="log-entry"><span class="log-time">[SYSTEM]</span><span>STU-Check (Client-Server Mode) พร้อมใช้งาน</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DASHBOARD -->
+      <div id="tab-dashboard" class="tab-content">
+        <div class="dash-grid">
+          <div class="dash-stat">
+            <div class="dash-icon" style="background:rgba(67,97,238,0.1);"><i class="bi bi-eye"
+                style="color:var(--accent);font-size:16px;"></i></div>
+            <div class="dash-val" id="d-total-scans" style="color:var(--accent);">0</div>
+            <div class="dash-lbl">รอบสแกนทั้งหมด</div>
+          </div>
+          <div class="dash-stat">
+            <div class="dash-icon" style="background:rgba(13,170,107,0.1);"><i class="bi bi-emoji-smile"
+                style="color:var(--positive);font-size:16px;"></i></div>
+            <div class="dash-val" id="d-avg-pos" style="color:var(--positive);">0%</div>
+            <div class="dash-lbl">เฉลี่ยอารมณ์บวก</div>
+          </div>
+          <div class="dash-stat">
+            <div class="dash-icon" style="background:rgba(229,62,62,0.1);"><i class="bi bi-emoji-frown"
+                style="color:var(--negative);font-size:16px;"></i></div>
+            <div class="dash-val" id="d-avg-neg" style="color:var(--negative);">0%</div>
+            <div class="dash-lbl">เฉลี่ยอารมณ์ลบ</div>
+          </div>
+          <div class="dash-stat">
+            <div class="dash-icon" style="background:rgba(208,140,0,0.1);"><i class="bi bi-graph-up"
+                style="color:var(--neutral);font-size:16px;"></i></div>
+            <div class="dash-val" id="d-score" style="color:var(--neutral);">0</div>
+            <div class="dash-lbl">คะแนนรวมคาบ</div>
+          </div>
+        </div>
+        <div class="chart-row">
+          <div class="chart-card">
+            <div class="chart-title"><i class="bi bi-pie-chart-fill"></i>สัดส่วนอารมณ์</div><canvas id="pieChart"
+              height="200"></canvas>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title"><i class="bi bi-bar-chart-fill"></i>จำนวนต่อรอบ</div><canvas id="barChart"
+              height="200"></canvas>
+          </div>
+        </div>
+        <div class="chart-card" style="margin-bottom:16px;">
+          <div class="chart-title"><i class="bi bi-graph-up-arrow"></i>แนวโน้มอารมณ์ตลอดคาบ</div><canvas id="lineChart"
+            height="100"></canvas>
+        </div>
+        <div style="display:flex;justify-content:flex-end;">
+          <button class="btn-toggle start" style="width:auto;padding:10px 22px;gap:7px;" onclick="exportReport()"><i
+              class="bi bi-download"></i>ดาวน์โหลดรายงาน CSV</button>
+        </div>
+      </div>
+
+      <!-- ABOUT -->
+      <div id="tab-about" class="tab-content">
+        <div class="about-card">
+          <h2>STU-Check</h2>
+          <p>ระบบ AI ประเมินผลการจัดการเรียนการสอนในห้องเรียน ใช้ Camera Webcam ดักจับภาพ แล้วส่งผ่าน HTTPS ไปยัง
+            FastAPI Server ที่บ้านเพื่อวิเคราะห์อารมณ์ด้วย AI โดยส่งเพียง 1 ภาพ ต่อ 1 นาที เพื่อประหยัดแบนด์วิธ</p>
+          <div class="about-row"><i class="bi bi-building"></i><span><strong>โรงเรียน:</strong> พะเยาพิทยาคม
+              สังกัดสำนักงานเขตพื้นที่การศึกษามัธยมศึกษาพะเยา</span></div>
+          <div class="about-row"><i class="bi bi-people-fill"></i><span><strong>ผู้พัฒนา:</strong> นายสากล จันทร์ขาว,
+              นายปริพัฒน์ มาแก้ว, นางสาวณิชา วันดู, นางสาวฐิติวรดา งานดี</span></div>
+          <div class="about-row"><i class="bi bi-person-badge"></i><span><strong>ครูที่ปรึกษา:</strong> นายเอกพงษ์
+              แก่นจันทร์</span></div>
+          <div class="about-row"><i class="bi bi-cpu"></i><span><strong>สถาปัตยกรรม:</strong> Frontend (GitHub Pages) +
+              Backend (FastAPI + Ngrok)</span></div>
+          <div class="about-row"><i class="bi bi-shield-check"></i><span><strong>ความเป็นส่วนตัว:</strong>
+              ไม่บันทึกวิดีโอ ส่งเพียงภาพนิ่ง 1 ภาพ/นาที และเก็บข้อมูลเป็นตัวเลขเท่านั้น</span></div>
+          <div class="about-row"><i class="bi bi-hdd-network"></i><span><strong>การเชื่อมต่อ:</strong> HTTPS ผ่าน Ngrok
+              Tunnel ไปยัง Python FastAPI Server ที่คอมบ้าน</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Bottom Nav -->
+    <div class="mobile-nav" id="mobile-nav">
+      <div class="mobile-nav-inner">
+        <button class="mobile-tab active" id="mt-camera" onclick="switchTab('camera')">
+          <i class="bi bi-camera-video"></i><span>กล้อง</span>
+        </button>
+        <button class="mobile-tab" id="mt-dashboard" onclick="switchTab('dashboard')">
+          <i class="bi bi-bar-chart-line"></i><span>แดชบอร์ด</span>
+        </button>
+        <button class="mobile-tab" id="mt-about" onclick="switchTab('about')">
+          <i class="bi bi-info-circle"></i><span>เกี่ยวกับ</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS MODAL -->
+  <div class="modal-overlay" id="settings-overlay" onclick="settingsOut(event)">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div class="modal-title"><i class="bi bi-gear-fill"></i>การตั้งค่า</div>
+        <button class="modal-close" onclick="closeSettings()"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="modal-body">
+
+        <!-- บัญชีผู้ใช้ -->
+        <div class="setting-section">
+          <div class="setting-section-title"><i class="bi bi-person-circle"></i>บัญชีผู้ใช้</div>
+          <div class="setting-block">
+            <!-- โปรไฟล์ -->
+            <div class="avatar-upload-wrap">
+              <div class="avatar-preview" id="settings-avatar-preview">
+                <span id="settings-avatar-letter">?</span>
+                <img id="settings-avatar-img" src="" style="display:none;">
+              </div>
+              <div class="avatar-upload-info">
+                <div class="avatar-upload-label">รูปโปรไฟล์</div>
+                <div class="avatar-upload-sub">รองรับ JPG, PNG ขนาดไม่เกิน 2MB</div>
+              </div>
+              <button class="btn-avatar-change" onclick="document.getElementById('avatar-file-input').click()">
+                <i class="bi bi-camera"></i>เปลี่ยนรูป
+              </button>
+              <input type="file" id="avatar-file-input" accept="image/jpeg,image/png,image/webp"
+                onchange="handleAvatarChange(event)">
+            </div>
+            <div class="setting-input-divider"></div>
+            <div class="setting-input-block">
+              <div class="setting-input-label">ชื่อที่แสดงในระบบ (ไม่เกี่ยวข้องกับชื่อผู้ใช้)</div>
+              <input type="text" id="setting-displayname" class="setting-input" placeholder="กรอกชื่อที่ต้องการแสดง">
+            </div>
+            <div class="setting-input-divider"></div>
+            <div class="setting-input-block">
+              <div class="setting-input-label">Unique ID — รหัสเฉพาะสำหรับบันทึกข้อมูลลงในระบบ</div>
+              <input type="text" id="setting-uid" class="setting-input" placeholder="กรอก Unique ID">
+            </div>
+            <div style="padding:0 13px 13px; display: flex; gap: 9px;">
+              <button class="btn-save" onclick="saveAccountSettings(event)" style="margin-top: 10px; flex: 1;"><i
+                  class="bi bi-floppy"></i>บันทึกข้อมูล</button>
+              <button class="btn-delete" onclick="openDeleteConfirmModal()" style="margin-top: 10px; flex: 1;"><i
+                  class="bi bi-trash"></i>ลบบัญชี</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-divider"></div>
+
+        <!-- การแสดงผล -->
+        <div class="setting-section">
+          <div class="setting-section-title"><i class="bi bi-palette"></i>การแสดงผล</div>
+          <div class="setting-block">
+            <div class="setting-row">
+              <div class="setting-row-info">
+                <div class="setting-row-label">โหมดมืด (Dark Mode)</div>
+                <div class="setting-row-desc">เปลี่ยนธีมเป็นสีเข้มเพื่อถนอมสายตา</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="dark-toggle" onchange="toggleDark(this)">
+                <div class="toggle-track"></div>
+                <div class="toggle-thumb"></div>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-divider"></div>
+
+        <!-- กล้อง -->
+        <div class="setting-section" style="padding-bottom:4px;">
+          <div class="setting-section-title"><i class="bi bi-camera-video"></i>กล้อง Webcam</div>
+          <div class="setting-block" id="cam-setting-block">
+            <!-- ไม่พบกล้อง -->
+            <div class="cam-no-device" id="cam-no-device" style="display:none;">
+              <i class="bi bi-camera-video-off"></i>
+              <div>
+                <div style="font-size:13px;font-weight:500;color:var(--text);">ไม่พบ Webcam</div>
+                <div style="font-size:11px;color:var(--text3);margin-top:2px;">กำลังรอการเชื่อมต่ออุปกรณ์ใหม่...</div>
+              </div>
+            </div>
+            <!-- มีกล้อง -->
+            <div class="setting-input-block" id="cam-select-wrap">
+              <div class="setting-input-label">เลือกกล้องที่ต้องการใช้งาน</div>
+              <select class="cam-select" id="cam-select" onchange="changeCam(this.value)">
+                <option value="">กำลังโหลด...</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- CONSENT MODAL -->
+  <div class="consent-overlay" id="consent-overlay">
+    <div class="consent-modal">
+      <div class="consent-icon"><i class="bi bi-shield-check"></i></div>
+      <div class="consent-body">
+        <div class="consent-title">ยืนยันเปิดกล้อง</div>
+        <div class="consent-text">
+          ระบบจะถ่ายภาพนิ่งจาก Webcam แล้วส่งไปวิเคราะห์อารมณ์ที่ Server ทุก <strong style="color:var(--text);">1 นาที</strong><br>
+          <strong style="color:var(--text);">ไม่มีการบันทึกวิดีโอ</strong> — ส่งเพียงภาพนิ่ง 1 ภาพ/รอบเท่านั้น
+        </div>
+        <div class="consent-skip-row">
+          <label>
+            <input type="checkbox" id="consent-skip">
+            ไม่ต้องแจ้งเตือนฉันในภายหลัง
+          </label>
+        </div>
+        <div class="consent-btns">
+          <button class="btn-cancel" onclick="closeConsent()"><i class="bi bi-x-circle"></i> ยกเลิก</button>
+          <button class="btn-ok" onclick="consentOk()"><i class="bi bi-check-circle-fill"></i> ยืนยัน</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- UNSAVED CONFIRM MODAL -->
+  <div class="consent-overlay" id="unsaved-confirm-overlay">
+    <div class="consent-modal" style="border-color: rgba(208, 140, 0, 0.25);">
+      <div class="consent-icon"><i class="bi bi-exclamation-triangle-fill" style="color: var(--neutral);"></i></div>
+      <div class="consent-body">
+        <div class="consent-title">ต้องการเริ่มบันทึกใหม่โดยไม่เซฟข้อมูลเก่าหรือไม่?</div>
+        <div class="consent-text">
+          พบข้อมูลสถิติเดิมที่บันทึกไว้ในระบบซึ่งยังไม่ได้กดส่งออกรายงาน (Export CSV)<br>
+          หากเริ่มบันทึกใหม่ <strong style="color:var(--negative);">ข้อมูลเดิมในคาบนี้จะถูกรีเซ็ตและลบออกทันที</strong>
+        </div>
+        <div class="consent-btns">
+          <button class="btn-ok" onclick="exportReportAndClose()" style="background: var(--positive);"><i class="bi bi-download"></i> เซฟข้อมูล</button>
+          <button class="btn-cancel" onclick="confirmStartNewSession()"><i class="bi bi-play-fill"></i> เริ่มบันทึกใหม่</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DELETE CONFIRM MODAL -->
+  <div class="consent-overlay" id="delete-confirm-overlay">
+    <div class="consent-modal" style="border-color: rgba(229,62,62,0.25);">
+      <div class="consent-icon"><i class="bi bi-exclamation-triangle-fill" style="color: var(--negative);"></i></div>
+      <div class="consent-body">
+        <div class="consent-title">ยืนยันการลบบัญชีผู้ใช้</div>
+        <div class="consent-text">
+          บัญชีของคุณรวมถึงการตั้งค่าทั้งหมดจะถูกลบออกจากเครื่องนี้ถาวร<br>
+          <strong style="color:var(--negative);">การดำเนินการนี้ไม่สามารถย้อนกลับได้</strong>
+        </div>
+        <div class="consent-btns">
+          <button class="btn-cancel" onclick="closeDeleteConfirmModal()"><i class="bi bi-x-circle"></i> ยกเลิก</button>
+          <button class="btn-ok" onclick="doDeleteAccount()" style="background: var(--negative);"><i class="bi bi-trash-fill"></i> ยืนยันลบ</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="js/app.js"></script>
+</body>
+
+</html>
